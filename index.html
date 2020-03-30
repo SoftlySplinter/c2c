@@ -1,0 +1,216 @@
+<html>
+<head>
+	<style>
+.colour-display {
+	border: 1px solid black;
+	padding-left: 1em;
+	margin-right: 1em;
+	margin-left: 1em;
+}
+	</style>
+</head>
+<body onload="main()">
+	<header>
+		<h1>C2C creator</h1>
+	</header>
+	
+	<section>
+		<h2>Image</h2>
+		<canvas id="canvas"></canvas>
+	</section>
+	
+	
+	<section>
+		<h2>Colours</h2>
+		<ol id="colours">
+			
+		</ol>
+		
+		<h2>Pattern</h2>
+		<div id="pattern">
+	
+		</div>
+	</section>
+	
+	<script>
+const canvas = document.getElementById('canvas');
+const pattern = document.getElementById('pattern');
+const coloursElem = document.getElementById('colours');
+
+function main() {
+	let data = getImageData()
+		.then(imData => {
+			let pattern = getC2CPattern(imData)
+			pattern = flatterColour(pattern); 
+			pattern.data = flatternPattern(pattern.data);
+			printPattern(pattern);
+		});
+}
+
+function getImageData() {
+	return new Promise(resolve => {
+		const ctx = canvas.getContext('2d');
+		const img = new Image();
+		img.src = 'heart.png';
+		
+		const imData = [];
+		
+		img.onload = () => {
+			canvas.height = img.height;
+			canvas.width = img.width;
+			ctx.drawImage(img, 0, 0);
+		
+			let white = 0;
+			let black = 0;
+			let data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+		
+			for(let i = 0; i < data.length; i+=4) {
+				let count = i / 4;
+				let x = count % img.width;
+				let y = Math.floor(count / img.width);
+				
+				
+				if(!imData[x]) {
+				  imData[x] = [];
+				}
+				
+				let r = data[i];
+				let g = data[i+1];
+				let b = data[i+2];
+				// Don't need alpha
+				
+				imData[x][y] = `${r}, ${g}, ${b}`;
+			}
+		
+			resolve({'width': img.width, 'height': img.height, 'data': imData});
+		};
+	});
+}
+
+function getC2CPattern(imData) {
+	const rounds = [];
+	const numRounds = imData.height + imData.width - 1;
+	
+	for(let round = 0; round < numRounds; round++) {
+		const stitches = [];
+		rounds[round] = stitches;
+		
+		let half = Math.round(numRounds/2);
+		let numStitch = half - Math.abs(round - (half - 1));
+		numStitch = Math.min(imData.width, numStitch);
+		
+		let curX = Math.min(round, imData.height - 1);
+		for(let stitch = 0; stitch < numStitch; stitch++) {
+			let offset = Math.max(0, round - imData.height + 1);
+			let y = stitch + offset;
+			
+			let pixel = { 'colour': imData.data[y][curX], 'increase': false, 'decrease': false };
+			
+			stitches[stitch] = pixel;
+			curX--;
+		}
+		
+		if(round % 2 == 0) {
+			rounds[round].reverse();
+			
+			if(round < imData.width) {
+				rounds[round][0].increase = true;
+			} else {
+				rounds[round][0].decrease = true;
+			}
+		} else {
+			if(round < imData.height) {
+				rounds[round][0].increase = true;
+			} else {
+				rounds[round][0].decrease = true;
+			}
+		}
+	}
+	return rounds;
+}
+
+function flatterColour(patternData) {
+	const colours = [];
+	
+	data = patternData.map(round => {
+		return round.map(stitch => {
+			let idx = colours.indexOf(stitch.colour);
+			if(idx < 0) {
+				colours.push(stitch.colour);
+				idx = colours.length - 1;
+			}
+			stitch.colour = idx;
+			return stitch;
+		});
+	});
+	
+	console.log(data, colours)
+	
+	return {'data': data, 'colours': colours} ;
+}
+
+function flatternPattern(patternData) {
+	const flatPattern = [];
+	
+	for(let i = 0; i < patternData.length; i++) {
+		const round = patternData[i];
+		const flatRound = [];
+		
+		let prevColour = null;
+		
+		for(let j = 0; j < round.length; j++) {
+			const curColour = round[j].colour;
+			
+			if(curColour !== prevColour) {
+				flatRound.push({ 'count': 1, 'colour': curColour, 'increase': round[j].increase, 'decrease': round[j].decrease });
+			} else {
+				flatRound[flatRound.length - 1].count++;
+			}
+			
+			prevColour = curColour;
+		}
+		
+		flatPattern[i] = flatRound;
+	}
+	
+	return flatPattern;
+}
+
+function printPattern(patternData) {
+	patternData.colours.forEach(colour => {
+		colourItem = document.createElement('li');
+		colourItem.innerHTML = `<span class="colour-display" style="background-color: rgb(${colour})"></span> (${colour})`;
+		coloursElem.appendChild(colourItem);
+	});
+	for(let round = 0; round < patternData.data.length; round++) {
+		
+		const title = document.createElement('h3')
+		title.innerHTML = `Round ${1+round}`;
+		pattern.appendChild(title);
+		const roundData = patternData.data[round];
+		
+		
+		for(let stitch = 0; stitch < roundData.length; stitch++) {
+			const data = roundData[stitch];
+			
+			if(data.increase) {
+				const increase = document.createElement('p');
+				increase.innerHTML = 'Increase &times; 1';
+				pattern.appendChild(increase);
+			}
+			if(data.decrease) {
+				const decrease = document.createElement('p');
+				decrease.innerHTML = 'Decrease &times; 1';
+				pattern.appendChild(decrease);
+			}
+		
+			const detail = document.createElement('p');
+			detail.innerHTML = `${data.count} &times; Colour ${data.colour + 1} <span class="colour-display" style="background-color: rgb(${patternData.colours[data.colour]})"></span>`;
+			pattern.appendChild(detail);
+		}
+		
+	}
+}
+	</script>
+
+</body>
