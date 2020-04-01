@@ -87,6 +87,7 @@ function getImageData(image) {
 		const ctx = canvas.getContext('2d');
 		const img = new Image();
 		img.src = image;
+		img.crossOrigin = "anonymous";
 		
 		const imData = [];
 		
