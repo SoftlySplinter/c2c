@@ -1,5 +1,7 @@
-<html>
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
 <head>
+	<meta charset="utf-8">
 	<style>
 .colour-display {
 	border: 1px solid black;
@@ -231,7 +233,16 @@ function printPattern(patternData) {
 			div.classList.add('complete');
 		}
 		
-		div.addEventListener('click', (event) => {
+		const titleH = document.createElement('h3')
+		const title = document.createElement('a')
+		title.href = '#';
+		title.innerHTML = `Row ${1+row}`;
+		titleH.appendChild(title);
+		div.appendChild(titleH);
+		
+		
+		
+		title.addEventListener('click', (event) => {
 			window.localStorage.setItem('currentRow', row + 1)
 			
 			const divs = pattern.getElementsByTagName('div');
@@ -242,11 +253,9 @@ function printPattern(patternData) {
 					d.classList.remove('complete');
 				}
 			}
+			event.preventDefault();
 		});
 		
-		const title = document.createElement('h3')
-		title.innerHTML = `Row ${1+row}`;
-		div.appendChild(title);
 		const rowData = patternData.data[row];
 		
 		
