@@ -240,7 +240,8 @@ function printPattern(patternData) {
 		
 		const titleH = document.createElement('h3')
 		const title = document.createElement('a')
-		title.href = '#';
+		title.href = `#row-${row+1}`;
+		title.id = `row-${row}`;
 		title.innerHTML = `Row ${1+row}`;
 		titleH.appendChild(title);
 		div.appendChild(titleH);
@@ -260,7 +261,7 @@ function printPattern(patternData) {
 					d.classList.remove('complete');
 				}
 			}
-			event.preventDefault();
+			//event.preventDefault();
 		});
 		
 		const rowData = patternData.data[row];
@@ -286,6 +287,8 @@ function printPattern(patternData) {
 		}
 		
 	}
+	
+	location.href = `#row-${Number(window.localStorage.getItem('currentRow'))}`;
 }
 	</script>
 
