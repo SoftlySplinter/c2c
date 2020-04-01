@@ -45,6 +45,8 @@
 			
 		</ol>
 		
+		<p id="info"></p>
+		
 		<h2>Pattern</h2>
 		<div id="pattern">
 	
@@ -56,6 +58,8 @@ const canvas = document.getElementById('canvas');
 const pattern = document.getElementById('pattern');
 const coloursElem = document.getElementById('colours');
 const filElem = document.getElementById('fileElem');
+const infoElem = document.getElementById('info');
+
 
 fileElem.addEventListener("change", () => {
 	if(!fileElem.files.length) {
@@ -72,6 +76,7 @@ function main(img) {
 	if(!window.localStorage.getItem('currentRow')) {
 		window.localStorage.setItem('currentRow', 0);
 	}
+	infoElem.innerHTML = `Current row: ${window.localStorage.getItem('currentRow')}`;
 	
 	pattern.innerHTML = '';
 	coloursElem.innerHTML = '';
@@ -245,6 +250,8 @@ function printPattern(patternData) {
 		title.addEventListener('click', (event) => {
 			window.localStorage.setItem('currentRow', row + 1)
 			
+			infoElem.innerHTML = `Current row: ${window.localStorage.getItem('currentRow')}`;
+		
 			const divs = pattern.getElementsByTagName('div');
 			for(let d of divs) {
 				if(d.getAttribute('data-row') <= row) {
