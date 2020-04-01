@@ -7,16 +7,34 @@
 	margin-right: 1em;
 	margin-left: 1em;
 }
+
+#pattern {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
+  grid-gap: 5em;
+}
+
+.complete {
+	opacity: 25%;
+}
 	</style>
 </head>
-<body onload="main()">
+<body onload="load()">
 	<header>
 		<h1>C2C creator</h1>
 	</header>
 	
 	<section>
 		<h2>Image</h2>
+		
+		<form onsubmit="main(this.image.value); return false">
+			<input id="image" name="image" type="text" />
+			<input type="submit" value="Load" />
+		</form>
+		
 		<canvas id="canvas"></canvas>
+		
+		
 	</section>
 	
 	
@@ -37,8 +55,25 @@ const canvas = document.getElementById('canvas');
 const pattern = document.getElementById('pattern');
 const coloursElem = document.getElementById('colours');
 
-function main() {
-	let data = getImageData()
+
+function load() {
+	const currentPattern = window.localStorage.getItem('currentPattern')
+	if(currentPattern){
+		main(currentPattern);
+	}
+}
+	
+
+function main(img) {
+	if(!window.localStorage.getItem('currentRow')) {
+		window.localStorage.setItem('currentRow', 0);
+	}
+	
+	window.localStorage.setItem('currentPattern', img);
+	pattern.innerHTML = '';
+	coloursElem.innerHTML = '';
+	
+	let data = getImageData(img)
 		.then(imData => {
 			let pattern = getC2CPattern(imData)
 			pattern = flatterColour(pattern); 
@@ -47,15 +82,16 @@ function main() {
 		});
 }
 
-function getImageData() {
+function getImageData(image) {
 	return new Promise(resolve => {
 		const ctx = canvas.getContext('2d');
 		const img = new Image();
-		img.src = 'heart.png';
+		img.src = image;
 		
 		const imData = [];
 		
 		img.onload = () => {
+			console.log(image, ' loaded');
 			canvas.height = img.height;
 			canvas.width = img.width;
 			ctx.drawImage(img, 0, 0);
@@ -88,20 +124,20 @@ function getImageData() {
 }
 
 function getC2CPattern(imData) {
-	const rounds = [];
-	const numRounds = imData.height + imData.width - 1;
+	const rows = [];
+	const numRows = imData.height + imData.width - 1;
 	
-	for(let round = 0; round < numRounds; round++) {
+	for(let row = 0; row < numRows; row++) {
 		const stitches = [];
-		rounds[round] = stitches;
+		rows[row] = stitches;
 		
-		let half = Math.round(numRounds/2);
-		let numStitch = half - Math.abs(round - (half - 1));
+		let half = Math.round(numRows/2);
+		let numStitch = half - Math.abs(row - (half - 1));
 		numStitch = Math.min(imData.width, numStitch);
 		
-		let curX = Math.min(round, imData.height - 1);
+		let curX = Math.min(row, imData.height - 1);
 		for(let stitch = 0; stitch < numStitch; stitch++) {
-			let offset = Math.max(0, round - imData.height + 1);
+			let offset = Math.max(0, row - imData.height + 1);
 			let y = stitch + offset;
 			
 			let pixel = { 'colour': imData.data[y][curX], 'increase': false, 'decrease': false };
@@ -110,30 +146,30 @@ function getC2CPattern(imData) {
 			curX--;
 		}
 		
-		if(round % 2 == 0) {
-			rounds[round].reverse();
+		if(row % 2 == 0) {
+			rows[row].reverse();
 			
-			if(round < imData.width) {
-				rounds[round][0].increase = true;
+			if(row < imData.width) {
+				rows[row][0].increase = true;
 			} else {
-				rounds[round][0].decrease = true;
+				rows[row][0].decrease = true;
 			}
 		} else {
-			if(round < imData.height) {
-				rounds[round][0].increase = true;
+			if(row < imData.height) {
+				rows[row][0].increase = true;
 			} else {
-				rounds[round][0].decrease = true;
+				rows[row][0].decrease = true;
 			}
 		}
 	}
-	return rounds;
+	return rows;
 }
 
 function flatterColour(patternData) {
 	const colours = [];
 	
-	data = patternData.map(round => {
-		return round.map(stitch => {
+	data = patternData.map(row => {
+		return row.map(stitch => {
 			let idx = colours.indexOf(stitch.colour);
 			if(idx < 0) {
 				colours.push(stitch.colour);
@@ -153,24 +189,24 @@ function flatternPattern(patternData) {
 	const flatPattern = [];
 	
 	for(let i = 0; i < patternData.length; i++) {
-		const round = patternData[i];
-		const flatRound = [];
+		const row = patternData[i];
+		const flatRow = [];
 		
 		let prevColour = null;
 		
-		for(let j = 0; j < round.length; j++) {
-			const curColour = round[j].colour;
+		for(let j = 0; j < row.length; j++) {
+			const curColour = row[j].colour;
 			
 			if(curColour !== prevColour) {
-				flatRound.push({ 'count': 1, 'colour': curColour, 'increase': round[j].increase, 'decrease': round[j].decrease });
+				flatRow.push({ 'count': 1, 'colour': curColour, 'increase': row[j].increase, 'decrease': row[j].decrease });
 			} else {
-				flatRound[flatRound.length - 1].count++;
+				flatRow[flatRow.length - 1].count++;
 			}
 			
 			prevColour = curColour;
 		}
 		
-		flatPattern[i] = flatRound;
+		flatPattern[i] = flatRow;
 	}
 	
 	return flatPattern;
@@ -182,31 +218,55 @@ function printPattern(patternData) {
 		colourItem.innerHTML = `<span class="colour-display" style="background-color: rgb(${colour})"></span> (${colour})`;
 		coloursElem.appendChild(colourItem);
 	});
-	for(let round = 0; round < patternData.data.length; round++) {
+	
+	
+	
+	for(let row = 0; row < patternData.data.length; row++) {
+		const div = document.createElement('div');
+		div.classList.add('row');
+		div.setAttribute('data-row',row);
+		pattern.appendChild(div);
+		
+		if(row < window.localStorage.getItem('currentRow')) {
+			div.classList.add('complete');
+		}
+		
+		div.addEventListener('click', (event) => {
+			window.localStorage.setItem('currentRow', row + 1)
+			
+			const divs = pattern.getElementsByTagName('div');
+			for(let d of divs) {
+				if(d.getAttribute('data-row') <= row) {
+					d.classList.add('complete');
+				} else {
+					d.classList.remove('complete');
+				}
+			}
+		});
 		
 		const title = document.createElement('h3')
-		title.innerHTML = `Round ${1+round}`;
-		pattern.appendChild(title);
-		const roundData = patternData.data[round];
+		title.innerHTML = `Row ${1+row}`;
+		div.appendChild(title);
+		const rowData = patternData.data[row];
 		
 		
-		for(let stitch = 0; stitch < roundData.length; stitch++) {
-			const data = roundData[stitch];
+		for(let stitch = 0; stitch < rowData.length; stitch++) {
+			const data = rowData[stitch];
 			
 			if(data.increase) {
 				const increase = document.createElement('p');
 				increase.innerHTML = 'Increase &times; 1';
-				pattern.appendChild(increase);
+				div.appendChild(increase);
 			}
 			if(data.decrease) {
 				const decrease = document.createElement('p');
 				decrease.innerHTML = 'Decrease &times; 1';
-				pattern.appendChild(decrease);
+				div.appendChild(decrease);
 			}
 		
 			const detail = document.createElement('p');
 			detail.innerHTML = `${data.count} &times; Colour ${data.colour + 1} <span class="colour-display" style="background-color: rgb(${patternData.colours[data.colour]})"></span>`;
-			pattern.appendChild(detail);
+			div.appendChild(detail);
 		}
 		
 	}
