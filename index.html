@@ -19,7 +19,7 @@
 }
 	</style>
 </head>
-<body onload="load()">
+<body>
 	<header>
 		<h1>C2C creator</h1>
 	</header>
@@ -27,9 +27,8 @@
 	<section>
 		<h2>Image</h2>
 		
-		<form onsubmit="main(this.image.value); return false">
-			<input id="image" name="image" type="text" />
-			<input type="submit" value="Load" />
+		<form id="imageLoad">
+			<input type="file" id="fileElem" multiple accept="image/*">
 		</form>
 		
 		<canvas id="canvas"></canvas>
@@ -54,14 +53,17 @@
 const canvas = document.getElementById('canvas');
 const pattern = document.getElementById('pattern');
 const coloursElem = document.getElementById('colours');
+const filElem = document.getElementById('fileElem');
 
-
-function load() {
-	const currentPattern = window.localStorage.getItem('currentPattern')
-	if(currentPattern){
-		main(currentPattern);
+fileElem.addEventListener("change", () => {
+	if(!fileElem.files.length) {
+		console.error('No files');
+	} else {
+		src = URL.createObjectURL(fileElem.files[0]);
+		main(src);
+		URL.revokeObjectURL(src);
 	}
-}
+}, false); 
 	
 
 function main(img) {
@@ -69,7 +71,6 @@ function main(img) {
 		window.localStorage.setItem('currentRow', 0);
 	}
 	
-	window.localStorage.setItem('currentPattern', img);
 	pattern.innerHTML = '';
 	coloursElem.innerHTML = '';
 	
@@ -180,8 +181,6 @@ function flatterColour(patternData) {
 			return stitch;
 		});
 	});
-	
-	console.log(data, colours)
 	
 	return {'data': data, 'colours': colours} ;
 }
